@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DriftForce - Enterprise Drift Detection Platform</title>
+    <meta name="description" content="Enterprise-grade drift detection and automated remediation platform">
+    
+    <!-- Firebase Authentication -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        * {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        
+        *::-webkit-scrollbar {
+            display: none;
+        }
+        
+        html, body {
+            overflow: hidden;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(52, 211, 153, 0.6); }
+            50% { box-shadow: 0 0 40px rgba(52, 211, 153, 0.8); }
+        }
+        
+        #authOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            background: linear-gradient(135deg, #021017 0%, #032b21 50%, #021017 100%);
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .auth-container {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(52, 211, 153, 0.3);
+            border-radius: 24px;
+            padding: 48px;
+            width: 90%;
+            max-width: 420px;
+            animation: fadeIn 0.8s ease-out;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .auth-logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 32px;
+            font-size: 36px;
+            font-weight: 700;
+            color: white;
+            letter-spacing: 2px;
+            animation: glow 2s infinite;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .auth-logo::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            animation: shimmer 3s infinite;
+        }
+        
+        .auth-form input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(52, 211, 153, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            color: #fff;
+            font-size: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            transition: all 0.3s ease;
+            outline: none;
+            box-sizing: border-box;
+            margin-bottom: 16px;
+        }
+        
+        .auth-form input::placeholder {
+            color: rgba(52, 211, 153, 0.5);
+            font-weight: 500;
+        }
+        
+        .auth-form input:focus {
+            border-color: #34d399;
+            background: rgba(52, 211, 153, 0.1);
+            box-shadow: 0 0 20px rgba(52, 211, 153, 0.3);
+        }
+        
+        .auth-button {
+            width: 100%;
+            background: linear-gradient(135deg, #34d399 0%, #3b82f6 100%);
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-sizing: border-box;
+        }
+        
+        .auth-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(52, 211, 153, 0.4);
+        }
+        
+        .auth-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .auth-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            color: #ef4444;
+            font-size: 14px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: none;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        
+        body.unauthenticated #root {
+            display: none !important;
+        }
+        
+        .loading-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        .drift-card-enter {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .metric-card {
+            transition: all 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body class="unauthenticated">
+    <!-- Firebase Authentication Overlay -->
+    <div id="authOverlay">
+        <div class="auth-container">
+            <div class="auth-logo">DF</div>
+            <div style="text-align: center; margin-bottom: 32px;">
+                <h1 style="font-size: 32px; font-weight: bold; color: #fff; margin: 0 0 8px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                    DRIFTFORCE
+                </h1>
+                <p style="color: #9ca3af; font-size: 16px; margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                    Enterprise Access Portal
+                </p>
+            </div>
+            
+            <form id="authForm" class="auth-form">
+                <input type="email" id="authEmail" placeholder="Email address" required autocomplete="email">
+                <input type="password" id="authPassword" placeholder="Password" required autocomplete="current-password">
+                <div id="authError" class="auth-error"></div>
+                <button type="submit" class="auth-button">Access Platform</button>
+            </form>
+            
+            <p style="text-align: center; color: #6b7280; font-size: 14px; margin-top: 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                Secured by Enterprise Authentication
+            </p>
+        </div>
+    </div>
+    
+    <div id="root"></div>
+    
+    <!-- Firebase Configuration & Auth -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDQ9jKtgm-p9JJkKla07GdoEK64dDSgrp4",
+            authDomain: "driftforce-861ce.firebaseapp.com",
+            projectId: "driftforce-861ce",
+            storageBucket: "driftforce-861ce.firebasestorage.app",
+            messagingSenderId: "439455252696",
+            appId: "1:439455252696:web:b8fd6f3339b68e28d157ad",
+            measurementId: "G-W8RSBZV3D5"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                document.body.classList.remove('unauthenticated');
+                document.getElementById('authOverlay').style.display = 'none';
+                
+                user.getIdToken().then(token => {
+                    sessionStorage.setItem('authToken', token);
+                    window.authToken = token;
+                    window.userEmail = user.email;
+                });
+                
+                if (!window.reactAppInitialized) {
+                    initializeReactApp();
+                }
+            } else {
+                document.body.classList.add('unauthenticated');
+                document.getElementById('authOverlay').style.display = 'flex';
+                sessionStorage.removeItem('authToken');
+                window.authToken = null;
+                window.userEmail = null;
+            }
+        });
+        
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            const errorDiv = document.getElementById('authError');
+            const button = e.target.querySelector('button');
+            
+            button.disabled = true;
+            button.textContent = 'Authenticating...';
+            errorDiv.style.display = 'none';
+            
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.style.display = 'block';
+                button.disabled = false;
+                button.textContent = 'Access Platform';
+            }
+        });
+        
+        function initializeReactApp() {
+            window.reactAppInitialized = true;
+        }
+        
+        window.firebaseLogout = () => {
+            auth.signOut();
+        };
+    </script>
+    
+    <script type="text/babel">
+const DriftForce = () => {
+  // Simple icon components
+  const Icon = ({ children }) => React.createElement('span', {style: {marginRight: '8px'}}, children);
+  const AlertTriangle = () => React.createElement(Icon, null, '⚠️');
+  const CheckCircle = () => React.createElement(Icon, null, '✅');
+  const Activity = () => React.createElement(Icon, null, '📊');
+  const Shield = () => React.createElement(Icon, null, '🛡️');
+  const Zap = () => React.createElement(Icon, null, '⚡');
+  const Database = () => React.createElement(Icon, null, '🗄️');
+  const Terminal = () => React.createElement(Icon, null, '💻');
+  const User = () => React.createElement(Icon, null, '👤');
+  const LogOut = () => React.createElement(Icon, null, '🚪');
+  const Bell = () => React.createElement(Icon, null, '🔔');
+  const Play = () => React.createElement(Icon, null, '▶️');
+  const Pause = () => React.createElement(Icon, null, '⏸️');
+  const RefreshCw = () => React.createElement(Icon, null, '🔄');
+
+  // API Configuration
+  const API_BASE_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:8080' 
+    : 'https://api.driftforce.ai';
+  const WS_URL = window.location.hostname === 'localhost'
+    ? 'ws://localhost:8080'
+    : 'wss://api.driftforce.ai';
+
+  // Core state - only real data
+  const [systemStatus, setSystemStatus] = React.useState('INITIALIZING');
+  const [backendConnected, setBackendConnected] = React.useState(false);
+  const [websocket, setWebsocket] = React.useState(null);
+  const [activeTab, setActiveTab] = React.useState('drift-analysis');
+  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+  const [liveMode, setLiveMode] = React.useState(true);
+  const [emergencyMode, setEmergencyMode] = React.useState(false);
+  
+  // Real data from backend
+  const [drifts, setDrifts] = React.useState([]);
+  const [metrics, setMetrics] = React.useState({});
+  const [activities, setActivities] = React.useState([]);
+  const [systemInfo, setSystemInfo] = React.useState({});
+  const [notifications, setNotifications] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(null);
+  
+  // UI state
+  const [selectedDrift, setSelectedDrift] = React.useState(null);
+  const [remediating, setRemediating] = React.useState({});
+  const [remediationComplete, setRemediationComplete] = React.useState({});
+
+  // Fetch real data from backend
+  const fetchData = React.useCallback(async (endpoint) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        headers: {
+          'Authorization': `Bearer ${window.authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        if (response.status === 404) return null;
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error(`Error fetching ${endpoint}:`, error);
+      return null;
+    }
+  }, [API_BASE_URL]);
+
+  // Load initial data
+  React.useEffect(() => {
+    const loadData = async () => {
+      if (!window.authToken) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // Fetch all available data
+        const [systemData, driftsData, metricsData, activitiesData, notificationsData] = await Promise.allSettled([
+          fetchData('/api/status'),
+          fetchData('/api/drifts'),
+          fetchData('/api/metrics'),
+          fetchData('/api/activities'),
+          fetchData('/api/notifications')
+        ]);
+        
+        if (systemData.status === 'fulfilled' && systemData.value) {
+          setSystemInfo(systemData.value);
+          setSystemStatus('OPERATIONAL');
+          setBackendConnected(true);
+          setIsAnalyzing(true);
+        } else {
+          setSystemStatus('LIMITED MODE');
+          setBackendConnected(false);
+        }
+        
+        if (driftsData.status === 'fulfilled' && driftsData.value) {
+          setDrifts(Array.isArray(driftsData.value) ? driftsData.value : driftsData.value.drifts || []);
+        }
+        
+        if (metricsData.status === 'fulfilled' && metricsData.value) {
+          setMetrics(metricsData.value);
+        }
+        
+        if (activitiesData.status === 'fulfilled' && activitiesData.value) {
+          setActivities(Array.isArray(activitiesData.value) ? activitiesData.value : activitiesData.value.activities || []);
+        }
+        
+        if (notificationsData.status === 'fulfilled' && notificationsData.value) {
+          setNotifications(Array.isArray(notificationsData.value) ? notificationsData.value : notificationsData.value.notifications || []);
+        }
+        
+      } catch (err) {
+        setError('Connection Error');
+        setSystemStatus('OFFLINE');
+        setBackendConnected(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
+
+  // WebSocket connection
+  React.useEffect(() => {
+    if (!window.authToken || !liveMode) return;
+    
+    const connectWebSocket = () => {
+      try {
+        const ws = new WebSocket(WS_URL);
+        
+        ws.onopen = () => {
+          console.log('WebSocket connected');
+          ws.send(JSON.stringify({ 
+            type: 'auth',
+            token: window.authToken
+          }));
+          ws.send(JSON.stringify({ 
+            type: 'subscribe', 
+            channels: ['drifts', 'metrics', 'activities'] 
+          }));
+        };
+        
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            switch(data.type) {
+              case 'drift':
+                setDrifts(prev => [data.drift, ...prev]);
+                break;
+              case 'metrics':
+                setMetrics(data.metrics);
+                break;
+              case 'activity':
+                setActivities(prev => [data.activity, ...prev.slice(0, 49)]);
+                break;
+              case 'drift_resolved':
+                setDrifts(prev => prev.filter(d => d.id !== data.driftId));
+                setRemediating(prev => ({ ...prev, [data.driftId]: false }));
+                setRemediationComplete(prev => ({ ...prev, [data.driftId]: true }));
+                setTimeout(() => {
+                  setRemediationComplete(prev => ({ ...prev, [data.driftId]: false }));
+                }, 3000);
+                break;
+            }
+          } catch (e) {
+            console.error('WebSocket message error:', e);
+          }
+        };
+        
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+        };
+        
+        ws.onclose = () => {
+          console.log('WebSocket disconnected');
+          setTimeout(connectWebSocket, 5000);
+        };
+        
+        setWebsocket(ws);
+      } catch (error) {
+        console.error('WebSocket connection error:', error);
+        setTimeout(connectWebSocket, 5000);
+      }
+    };
+    
+    connectWebSocket();
+    
+    return () => {
+      if (websocket) {
+        websocket.close();
+      }
+    };
+  }, [WS_URL, liveMode]);
+
+  // Handle drift remediation
+  const handleRemediate = async (driftId) => {
+    setRemediating(prev => ({ ...prev, [driftId]: true }));
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/drifts/${driftId}/remediate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${window.authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setRemediationComplete(prev => ({ ...prev, [driftId]: true }));
+          setTimeout(() => {
+            setDrifts(prev => prev.filter(d => d.id !== driftId));
+            setRemediating(prev => ({ ...prev, [driftId]: false }));
+            setRemediationComplete(prev => ({ ...prev, [driftId]: false }));
+          }, 2000);
+        }
+      } else {
+        setRemediating(prev => ({ ...prev, [driftId]: false }));
+      }
+    } catch (error) {
+      console.error('Remediation error:', error);
+      setRemediating(prev => ({ ...prev, [driftId]: false }));
+    }
+  };
+
+  const handleLogout = () => {
+    window.firebaseLogout();
+  };
+
+  const toggleAnalysis = () => {
+    setIsAnalyzing(!isAnalyzing);
+    // Send command to backend if connected
+    if (websocket && websocket.readyState === WebSocket.OPEN) {
+      websocket.send(JSON.stringify({ 
+        type: 'command',
+        action: isAnalyzing ? 'pause' : 'start'
+      }));
+    }
+  };
+
+  const toggleEmergency = () => {
+    setEmergencyMode(!emergencyMode);
+    if (!emergencyMode) {
+      setSystemStatus('EMERGENCY');
+      setIsAnalyzing(false);
+    } else {
+      setSystemStatus('OPERATIONAL');
+    }
+    // Send emergency command to backend
+    if (websocket && websocket.readyState === WebSocket.OPEN) {
+      websocket.send(JSON.stringify({ 
+        type: 'command',
+        action: 'emergency',
+        enabled: !emergencyMode
+      }));
+    }
+  };
+
+  const getSeverityColor = (severity) => {
+    switch (severity) {
+      case 'CRITICAL': return 'text-red-400';
+      case 'WARNING': return 'text-yellow-400';
+      case 'HIGH': return 'text-orange-400';
+      case 'MEDIUM': return 'text-amber-400';
+      case 'LOW': return 'text-blue-400';
+      default: return 'text-gray-400';
+    }
+  };
+
+  const getSeverityBg = (severity) => {
+    switch (severity) {
+      case 'CRITICAL': return 'bg-red-500/20 border-red-500';
+      case 'WARNING': return 'bg-yellow-500/20 border-yellow-500';
+      case 'HIGH': return 'bg-orange-500/20 border-orange-500';
+      case 'MEDIUM': return 'bg-amber-500/20 border-amber-500';
+      case 'LOW': return 'bg-blue-500/20 border-blue-500';
+      default: return 'bg-gray-500/20 border-gray-500';
+    }
+  };
+
+  const tabs = [
+    { id: 'drift-analysis', label: 'drift-analysis.py', icon: Terminal },
+    { id: 'data-sources', label: 'data-sources.json', icon: Database },
+    { id: 'metrics', label: 'metrics.live', icon: Activity },
+    { id: 'system', label: 'system.config', icon: Zap }
+  ];
+
+  // Loading state with premium styling
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-20 h-20 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center text-black font-bold text-2xl mb-6 animate-pulse">
+            DF
+          </div>
+          <div className="text-cyan-400 text-lg font-mono mb-2">INITIALIZING DRIFTFORCE...</div>
+          <div className="text-gray-500 text-sm">Connecting to backend services</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white font-mono flex flex-col">
+      {/* Premium VS Code Style Header */}
+      <div className="bg-gradient-to-r from-gray-800 to-gray-900 border-b border-gray-700/50 p-3 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center text-black font-bold text-lg shadow-lg">
+                DF
+              </div>
+              <div>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                  DRIFTFORCE
+                </h1>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 ${backendConnected ? 'bg-green-400' : 'bg-yellow-400'} rounded-full animate-pulse`}></div>
+                  <span className={`${backendConnected ? 'text-green-400' : 'text-yellow-400'} text-xs font-bold`}>
+                    {systemStatus}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-6 text-xs">
+            {/* Display real metrics if available */}
+            {metrics.scanRate && (
+              <div className="text-center bg-gray-700/50 p-2 rounded-lg">
+                <div className="text-gray-400">SCAN</div>
+                <div className="text-cyan-400 font-bold">{metrics.scanRate}/s</div>
+              </div>
+            )}
+            {metrics.latency && (
+              <div className="text-center bg-gray-700/50 p-2 rounded-lg">
+                <div className="text-gray-400">LATENCY</div>
+                <div className="text-cyan-400 font-bold">{metrics.latency}ms</div>
+              </div>
+            )}
+            {metrics.accuracy && (
+              <div className="text-center bg-gray-700/50 p-2 rounded-lg">
+                <div className="text-gray-400">ACCURACY</div>
+                <div className="text-green-400 font-bold">{metrics.accuracy}%</div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setLiveMode(!liveMode)}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${
+                liveMode ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black shadow-lg' : 'bg-gray-600 text-white hover:bg-gray-500'
+              }`}
+            >
+              {liveMode ? '● LIVE' : 'DEMO'}
+            </button>
+            <button
+              onClick={toggleEmergency}
+              className={`px-4 py-2 rounded-lg border-2 text-sm font-bold transition-all duration-300 ${
+                emergencyMode ? 'border-red-500 text-red-500 bg-red-500/20 shadow-red-500/50 shadow-lg' : 'border-red-500 text-red-500 hover:bg-red-500/10'
+              }`}
+            >
+              EMERGENCY
+            </button>
+            {notifications.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <span className="text-yellow-400">🔔</span>
+                <span className="text-yellow-400 text-sm font-bold">{notifications.length}</span>
+              </div>
+            )}
+            <button
+              onClick={handleLogout}
+              className="flex items-center space-x-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-all"
+            >
+              <User />
+              <span>{window.userEmail || 'user'}</span>
+              <LogOut />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Premium Tab Bar */}
+      <div className="bg-gray-800 border-b border-gray-700/50">
+        <div className="flex">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-6 py-3 text-sm flex items-center space-x-3 border-r border-gray-700/50 transition-all duration-300 ${
+                activeTab === tab.id 
+                  ? 'bg-gray-900 text-white border-b-2 border-cyan-400 shadow-lg' 
+                  : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-750'
+              }`}
+            >
+              {React.createElement(tab.icon)}
+              <span className="font-medium">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex">
+        {/* Main Editor Area */}
+        <div className="flex-1 p-6 bg-gradient-to-br from-gray-900/95 to-gray-800/95 backdrop-blur-xl overflow-y-auto">
+          
+          {/* Drift Analysis Tab */}
+          {activeTab === 'drift-analysis' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <div className="text-green-400 mb-2 font-mono text-sm flex items-center">
+                    <span className="text-purple-400"># </span>DRIFT DETECTION ENGINE - REAL-TIME ANALYSIS
+                    <div className="ml-4 flex items-center space-x-2">
+                      <div className={`w-2 h-2 ${isAnalyzing ? 'bg-green-400' : 'bg-gray-400'} rounded-full ${isAnalyzing ? 'animate-pulse' : ''}`}></div>
+                      <span className={`${isAnalyzing ? 'text-green-400' : 'text-gray-400'} text-xs`}>
+                        {isAnalyzing ? 'ANALYZING' : 'PAUSED'}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-gray-400 text-sm">
+                    {drifts.length} active {drifts.length === 1 ? 'drift' : 'drifts'} detected
+                  </p>
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={toggleAnalysis}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center space-x-2 ${
+                      isAnalyzing 
+                        ? 'bg-red-500/20 border border-red-500 text-red-400 hover:bg-red-500/30' 
+                        : 'bg-green-500/20 border border-green-500 text-green-400 hover:bg-green-500/30'
+                    }`}
+                  >
+                    {isAnalyzing ? <Pause /> : <Play />}
+                    <span>{isAnalyzing ? 'PAUSE' : 'START'}</span>
+                  </button>
+                  <button className="px-4 py-2 bg-cyan-500/20 border border-cyan-500 text-cyan-400 rounded-lg text-sm font-bold hover:bg-cyan-500/30 transition-all flex items-center space-x-2">
+                    <RefreshCw />
+                    <span>REFRESH</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Drift Cards */}
+              {drifts.length === 0 ? (
+                <div className="bg-gray-800/50 p-12 rounded-2xl border border-gray-700/50 text-center">
+                  <div className="text-6xl mb-4">✨</div>
+                  <h3 className="text-xl font-bold text-gray-300 mb-2">No Drifts Detected</h3>
+                  <p className="text-gray-500">All systems operating within expected parameters</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {drifts.map((drift) => (
+                    <div 
+                      key={drift.id} 
+                      className={`${getSeverityBg(drift.severity || 'LOW')} border rounded-2xl p-6 font-mono text-sm transition-all duration-300 group cursor-pointer backdrop-blur-sm bg-opacity-80 hover:bg-opacity-100 hover:shadow-2xl hover:scale-[1.02] ${
+                        selectedDrift === drift.id ? 'ring-2 ring-cyan-400 shadow-cyan-400/25' : ''
+                      } ${
+                        remediationComplete[drift.id] ? 'border-green-500 bg-green-500/20' : ''
+                      }`}
+                      onClick={() => setSelectedDrift(selectedDrift === drift.id ? null : drift.id)}
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-blue-400 font-semibold">class</span>
+                          <span className="text-yellow-400 font-bold text-lg">{drift.name || drift.id}</span>
+                          <span className="text-gray-400">:</span>
+                          <span className={`${getSeverityColor(drift.severity || 'LOW')} px-3 py-1 rounded-lg bg-gray-800/60 text-xs font-bold backdrop-blur-sm`}>
+                            {remediationComplete[drift.id] ? 'RESOLVED' : (drift.severity || 'INFO')}
+                          </span>
+                          {drift.remediable && !remediationComplete[drift.id] && (
+                            <span className="px-3 py-1 rounded-lg bg-blue-500/30 text-blue-300 text-xs font-bold border border-blue-400/40 backdrop-blur-sm animate-pulse">
+                              AUTO-FIX READY
+                            </span>
+                          )}
+                          {remediationComplete[drift.id] && (
+                            <span className="px-3 py-1 rounded-lg bg-green-500/30 text-green-300 text-xs font-bold border border-green-400/40 backdrop-blur-sm">
+                              ✅ REMEDIATED
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          {drift.remediable && !remediationComplete[drift.id] && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemediate(drift.id);
+                              }}
+                              disabled={remediating[drift.id]}
+                              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all duration-300 backdrop-blur-sm ${
+                                remediating[drift.id]
+                                  ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-400/40 animate-pulse cursor-not-allowed'
+                                  : 'bg-green-500/80 hover:bg-green-500 text-white border border-green-400/60 hover:shadow-lg hover:shadow-green-400/25 transform hover:scale-105'
+                              }`}
+                            >
+                              {remediating[drift.id] ? (
+                                <span className="flex items-center space-x-2">
+                                  <span className="animate-spin">🔄</span>
+                                  <span>REMEDIATING...</span>
+                                </span>
+                              ) : (
+                                'REMEDIATE NOW'
+                              )}
+                            </button>
+                          )}
+                          <div className="text-gray-500 text-xs bg-gray-800/40 px-2 py-1 rounded backdrop-blur-sm">
+                            {drift.id}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {drift.description && (
+                        <div className="text-gray-300 mb-4 bg-gray-800/30 p-3 rounded-lg backdrop-blur-sm">
+                          <span className="text-purple-400">description = </span>
+                          <span className="text-green-400">"{drift.description}"</span>
+                        </div>
+                      )}
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                        {drift.service && (
+                          <div className="bg-gray-800/40 p-3 rounded-lg backdrop-blur-sm">
+                            <span className="text-purple-400 block mb-1">service:</span>
+                            <span className="text-cyan-400 font-semibold">"{drift.service}"</span>
+                          </div>
+                        )}
+                        {drift.detected_at && (
+                          <div className="bg-gray-800/40 p-3 rounded-lg backdrop-blur-sm">
+                            <span className="text-purple-400 block mb-1">detected:</span>
+                            <span className="text-cyan-400 font-semibold">
+                              "{new Date(drift.detected_at).toLocaleString()}"
+                            </span>
+                          </div>
+                        )}
+                        {drift.impact && (
+                          <div className="bg-gray-800/40 p-3 rounded-lg backdrop-blur-sm">
+                            <span className="text-purple-400 block mb-1">impact:</span>
+                            <span className="text-orange-400 font-semibold">"{drift.impact}"</span>
+                          </div>
+                        )}
+                        {drift.affected && (
+                          <div className="bg-gray-800/40 p-3 rounded-lg backdrop-blur-sm">
+                            <span className="text-purple-400 block mb-1">affected:</span>
+                            <span className="text-cyan-400 font-semibold">"{drift.affected}"</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {selectedDrift === drift.id && drift.details && (
+                        <div className="mt-4 p-4 bg-gray-800/60 rounded-lg backdrop-blur-sm border border-gray-600/50 animate-in slide-in-from-top duration-300">
+                          <h4 className="text-cyan-400 font-bold mb-3">Detailed Analysis:</h4>
+                          <pre className="text-xs text-gray-300 overflow-x-auto">
+                            {JSON.stringify(drift.details, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Data Sources Tab */}
+          {activeTab === 'data-sources' && (
+            <div className="h-full font-mono text-sm">
+              <div className="text-green-400 mb-4">
+                <span className="text-purple-400"># </span>CONNECTED DATA SOURCES
+              </div>
+              <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700/50 backdrop-blur-sm">
+                <pre className="text-gray-300">
+{JSON.stringify({
+  "api_endpoint": API_BASE_URL,
+  "websocket": WS_URL,
+  "backend_connected": backendConnected,
+  "live_mode": liveMode,
+  "system_status": systemStatus,
+  "active_drifts": drifts.length,
+  "metrics": metrics,
+  "last_update": new Date().toISOString()
+}, null, 2)}
+                </pre>
+              </div>
+            </div>
+          )}
+          
+          {/* Metrics Tab */}
+          {activeTab === 'metrics' && (
+            <div className="space-y-6">
+              <div className="text-green-400 mb-4 font-mono text-sm">
+                <span className="text-purple-400"># </span>LIVE METRICS DASHBOARD
+              </div>
+              
+              {Object.keys(metrics).length === 0 ? (
+                <div className="bg-gray-800/50 p-12 rounded-2xl border border-gray-700/50 text-center">
+                  <div className="text-6xl mb-4">📊</div>
+                  <h3 className="text-xl font-bold text-gray-300 mb-2">No Metrics Available</h3>
+                  <p className="text-gray-500">Waiting for backend metrics stream...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Object.entries(metrics).map(([key, value]) => (
+                    <div key={key} className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 p-6 rounded-xl border border-gray-700/50 backdrop-blur-sm hover:border-cyan-500/50 transition-all duration-300 metric-card">
+                      <div className="text-gray-400 text-sm mb-2">
+                        {key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').toUpperCase()}
+                      </div>
+                      <div className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                        {typeof value === 'number' ? value.toLocaleString() : value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* System Tab */}
+          {activeTab === 'system' && (
+            <div className="space-y-6 font-mono text-sm">
+              <div className="text-green-400 mb-4">
+                <span className="text-purple-400"># </span>SYSTEM CONFIGURATION
+              </div>
+              
+              <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700/50 backdrop-blur-sm">
+                <h3 className="text-cyan-400 font-bold mb-4">Connection Details</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-purple-400">api_endpoint:</span>
+                    <span className="text-green-400">"{API_BASE_URL}"</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-purple-400">websocket_url:</span>
+                    <span className="text-green-400">"{WS_URL}"</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-purple-400">authenticated_user:</span>
+                    <span className="text-green-400">"{window.userEmail}"</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-purple-400">backend_connected:</span>
+                    <span className={backendConnected ? 'text-green-400' : 'text-red-400'}>
+                      {backendConnected.toString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              {systemInfo && Object.keys(systemInfo).length > 0 && (
+                <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700/50 backdrop-blur-sm">
+                  <h3 className="text-cyan-400 font-bold mb-4">Backend System Info</h3>
+                  <pre className="text-gray-300 text-xs overflow-x-auto">
+{JSON.stringify(systemInfo, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Premium Right Sidebar */}
+        <div className="w-96 bg-gradient-to-b from-gray-800/95 to-gray-900/95 border-l border-gray-700/50 p-6 backdrop-blur-xl shadow-2xl">
+          {/* Real-time Status */}
+          <div className="mb-8">
+            <h3 className="text-sm font-bold text-gray-300 mb-4 flex items-center">
+              <span className="mr-2">🚀</span>
+              SYSTEM STATUS
+            </h3>
+            <div className="bg-gradient-to-br from-gray-900/50 to-gray-800/50 p-4 rounded-xl border border-gray-700/50 backdrop-blur-sm">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-gray-400">Status</span>
+                <span className={`font-bold ${backendConnected ? 'text-green-400' : 'text-yellow-400'}`}>
+                  {systemStatus}
+                </span>
+              </div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-gray-400">Mode</span>
+                <span className={`font-bold ${liveMode ? 'text-cyan-400' : 'text-gray-400'}`}>
+                  {liveMode ? 'LIVE' : 'DEMO'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Analysis</span>
+                <span className={`font-bold ${isAnalyzing ? 'text-green-400' : 'text-gray-400'}`}>
+                  {isAnalyzing ? 'ACTIVE' : 'PAUSED'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Threat Summary */}
+          {drifts.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-sm font-bold text-gray-300 mb-4 flex items-center">
+                <span className="mr-2">🛡️</span>
+                THREAT SUMMARY
+              </h3>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="bg-gradient-to-br from-red-900/50 to-red-800/50 p-4 rounded-xl text-center border border-red-500/30 backdrop-blur-sm hover:scale-105 transition-all duration-300 cursor-pointer">
+                  <div className="text-3xl text-red-400 font-bold">
+                    {drifts.filter(d => d.severity === 'CRITICAL').length}
+                  </div>
+                  <div className="text-gray-400 font-medium">CRITICAL</div>
+                </div>
+                <div className="bg-gradient-to-br from-yellow-900/50 to-yellow-800/50 p-4 rounded-xl text-center border border-yellow-500/30 backdrop-blur-sm hover:scale-105 transition-all duration-300 cursor-pointer">
+                  <div className="text-3xl text-yellow-400 font-bold">
+                    {drifts.filter(d => d.severity === 'WARNING').length}
+                  </div>
+                  <div className="text-gray-400 font-medium">WARNING</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Live Activity Terminal */}
+          <div>
+            <h3 className="text-sm font-bold text-gray-300 mb-4 flex items-center">
+              <span className="mr-2">💻</span>
+              LIVE ACTIVITY
+            </h3>
+            <div className="bg-gray-900/70 border border-gray-700/50 p-4 rounded-xl max-h-72 overflow-y-auto font-mono backdrop-blur-sm">
+              {activities.length === 0 ? (
+                <div className="text-center text-gray-500 text-xs py-8">
+                  <div className="text-2xl mb-2">📡</div>
+                  <div>Waiting for activity...</div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {activities.slice(0, 10).map((activity, index) => (
+                    <div key={index} className="flex items-start space-x-3 text-xs hover:bg-gray-800/50 p-2 rounded-lg transition-all duration-200 cursor-pointer">
+                      <div className="text-gray-500 w-16 font-mono">
+                        {activity.timestamp ? new Date(activity.timestamp).toLocaleTimeString() : '--:--:--'}
+                      </div>
+                      <div className="flex-1 text-gray-300">{activity.message || activity}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Premium Status Bar */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs px-6 py-2 flex items-center justify-between shadow-lg">
+        <div className="flex items-center space-x-6">
+          <span className="flex items-center space-x-1">
+            <span>🔥</span>
+            <span className="font-bold">DriftForce Enterprise</span>
+          </span>
+          <span className="flex items-center space-x-1">
+            {isAnalyzing ? <span>⚡</span> : <span>⏸️</span>}
+            <span className="font-medium">{isAnalyzing ? 'ANALYZING' : 'PAUSED'}</span>
+          </span>
+          <span className="flex items-center space-x-1">
+            <span>📊</span>
+            <span>{drifts.length} drifts detected</span>
+          </span>
+        </div>
+        <div className="flex items-center space-x-6">
+          <span>Connection: {backendConnected ? '✅' : '⚠️'}</span>
+          <span>UTF-8</span>
+          <span>v1.0.0</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Initialize React app when ready
+window.initializeReactApp = () => {
+  ReactDOM.render(<DriftForce />, document.getElementById('root'));
+};
+    </script>
+</body>
+</html>
