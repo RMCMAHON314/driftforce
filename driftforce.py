@@ -125,6 +125,33 @@ class DriftForce:
         
         return drifts
 
+def send_slack_alert(webhook_url, drifts):
+    """Send drift alerts to Slack"""
+    import urllib.request
+    import urllib.error
+    
+    if not webhook_url or not drifts:
+        return
+    
+    message = {
+        "text": f"🚨 Schema Drift Alert: {len(drifts)} changes detected",
+        "attachments": [{
+            "color": "warning",
+            "fields": [{"title": "Changes", "value": "\n".join(drifts[:10])}]
+        }]
+    }
+    
+    try:
+        req = urllib.request.Request(
+            webhook_url,
+            data=json.dumps(message).encode('utf-8'),
+            headers={'Content-Type': 'application/json'}
+        )
+        urllib.request.urlopen(req)
+        print("📢 Slack alert sent")
+    except:
+        pass  # Silently fail if webhook is invalid
+
 def main():
     parser = argparse.ArgumentParser(description='Detect schema drifts in Snowflake')
     parser.add_argument('action', choices=['snapshot', 'compare'],
@@ -134,6 +161,7 @@ def main():
     parser.add_argument('--save', help='Save snapshot to file')
     parser.add_argument('--baseline', help='Baseline file for comparison')
     parser.add_argument('--current', help='Current file for comparison')
+    parser.add_argument('--webhook', help='Slack webhook URL for alerts')
     
     args = parser.parse_args()
     df = DriftForce()
@@ -168,6 +196,10 @@ def main():
             print(f"\n🚨 Found {len(drifts)} drift(s):\n")
             for drift in drifts:
                 print(f"  {drift}")
+            
+            # Send Slack alert if webhook provided
+            if args.webhook:
+                send_slack_alert(args.webhook, drifts)
         else:
             print("\n✅ No drifts detected")
 
